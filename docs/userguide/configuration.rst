@@ -661,7 +661,7 @@ Can be one of the following:
 .. _`Memcached`: http://memcached.org
 .. _`Redis`: https://redis.io
 .. _`Cassandra`: http://cassandra.apache.org/
-.. _`Elasticsearch`: https://aws.amazon.com/elasticsearch-service/
+.. _`Elasticsearch`: https://www.elastic.co/products/elasticsearch
 .. _`IronCache`: http://www.iron.io/cache
 .. _`CouchDB`: http://www.couchdb.com/
 .. _`CosmosDB`: https://azure.microsoft.com/en-us/services/cosmos-db/
@@ -1423,6 +1423,16 @@ Maximum number of retries before an exception is propagated.
 Default: 10.0 seconds.
 
 Global timeout,used by the elasticsearch result backend.
+
+.. setting:: elasticsearch_ingest_pipeline
+
+``elasticsearch_ingest_pipeline``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Default: :const:`None`
+
+Run results through an ingest pipeline before indexing. Useful for generating
+dashboards.
 
 .. _conf-riak-result-backend:
 

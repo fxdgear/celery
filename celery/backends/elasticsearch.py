@@ -17,7 +17,7 @@ try:
 except ImportError:
     elasticsearch = None  # noqa
 
-__all__ = ('ElasticsearchBackend',)
+__all__ = ("ElasticsearchBackend",)
 
 E_LIB_MISSING = """\
 You need to install the elasticsearch library to use the Elasticsearch \
@@ -33,10 +33,10 @@ class ElasticsearchBackend(KeyValueStoreBackend):
             if module :pypi:`elasticsearch` is not available.
     """
 
-    index = 'celery'
-    doc_type = 'backend'
-    scheme = 'http'
-    host = 'localhost'
+    index = "celery"
+    doc_type = "_doc"
+    scheme = "http"
+    host = "localhost"
     port = 9200
     username = None
     password = None
@@ -56,11 +56,11 @@ class ElasticsearchBackend(KeyValueStoreBackend):
 
         if url:
             scheme, host, port, username, password, path, _ = _parse_url(url)  # noqa
-            if scheme == 'elasticsearch':
+            if scheme == "elasticsearch":
                 scheme = None
             if path:
-                path = path.strip('/')
-                index, _, doc_type = path.partition('/')
+                path = path.strip("/")
+                index, _, doc_type = path.partition("/")
 
         self.index = index or self.index
         self.doc_type = doc_type or self.doc_type
@@ -71,14 +71,14 @@ class ElasticsearchBackend(KeyValueStoreBackend):
         self.password = password or self.password
 
         self.es_retry_on_timeout = (
-            _get('elasticsearch_retry_on_timeout') or self.es_retry_on_timeout
+            _get("elasticsearch_retry_on_timeout") or self.es_retry_on_timeout
         )
 
-        es_timeout = _get('elasticsearch_timeout')
+        es_timeout = _get("elasticsearch_timeout")
         if es_timeout is not None:
             self.es_timeout = es_timeout
 
-        es_max_retries = _get('elasticsearch_max_retries')
+        es_max_retries = _get("elasticsearch_max_retries")
         if es_max_retries is not None:
             self.es_max_retries = es_max_retries
 
@@ -86,14 +86,10 @@ class ElasticsearchBackend(KeyValueStoreBackend):
 
     def get(self, key):
         try:
-            res = self.server.get(
-                index=self.index,
-                doc_type=self.doc_type,
-                id=key,
-            )
+            res = self.server.get(index=self.index, doc_type=self.doc_type, id=key,)
             try:
-                if res['found']:
-                    return res['_source']['result']
+                if res["found"]:
+                    return json.dumps(res["_source"]["result"])
             except (TypeError, KeyError):
                 pass
         except elasticsearch.exceptions.NotFoundError:
@@ -104,16 +100,14 @@ class ElasticsearchBackend(KeyValueStoreBackend):
             self._index(
                 id=key,
                 body={
-                    'result': value,
-                    '@timestamp': '{0}Z'.format(
-                        datetime.utcnow().isoformat()[:-3]
-                    ),
+                    "result": json.loads(value),
+                    "@timestamp": "{0}Z".format(datetime.utcnow().isoformat()[:-3]),
                 },
             )
         except elasticsearch.exceptions.ConflictError:
             # document already exists, update it
             data = self.get(key)
-            data[key] = value
+            data[key] = json.loads(value)
             self._index(key, data, refresh=True)
 
     def _index(self, id, body, **kwargs):
@@ -127,7 +121,24 @@ class ElasticsearchBackend(KeyValueStoreBackend):
         )
 
     def mget(self, keys):
-        return [self.get(key) for key in keys]
+        """
+        Use elasticsearch mget to make one request instead of multiples
+        """
+        body = {"docs": [{"_id": key} for key in keys]}
+        results = self.server.mget(body, doc_type=self.doc_type, index=self.index)
+        ret = []
+        for res in results["docs"]:
+            try:
+                ret.append(json.dumps(res["_source"]["result"]))
+            except TypeError:
+                # failed to convert dict to json
+                continue
+            except KeyError:
+                # failed to fetch docuoment with id res["_id"]
+                # if we had a logging module hooked up we could log the error.
+                # from elasticsearch `res['error']`
+                continue
+        return ret
 
     def delete(self, key):
         self.server.delete(index=self.index, doc_type=self.doc_type, id=key)
@@ -138,7 +149,7 @@ class ElasticsearchBackend(KeyValueStoreBackend):
         if self.username and self.password:
             http_auth = (self.username, self.password)
         return elasticsearch.Elasticsearch(
-            '%s:%s' % (self.host, self.port),
+            "%s:%s" % (self.host, self.port),
             retry_on_timeout=self.es_retry_on_timeout,
             max_retries=self.es_max_retries,
             timeout=self.es_timeout,
