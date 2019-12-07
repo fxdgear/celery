@@ -2,6 +2,8 @@
 """Elasticsearch result store backend."""
 from __future__ import absolute_import, unicode_literals
 
+import json
+
 from datetime import datetime
 
 from kombu.utils.encoding import bytes_to_str
