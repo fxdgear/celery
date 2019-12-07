@@ -98,9 +98,6 @@ class ElasticsearchBackend(KeyValueStoreBackend):
             pass
 
     def set(self, key, value):
-        import ipdb
-
-        ipdb.set_trace()
         try:
             self._index(
                 id=key,
